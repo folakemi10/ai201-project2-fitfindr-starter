@@ -13,6 +13,7 @@ Tools:
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -23,7 +24,6 @@ load_dotenv()
 
 
 # ── Groq client ───────────────────────────────────────────────────────────────
-
 def _get_groq_client():
     """Initialize and return a Groq client using GROQ_API_KEY from .env."""
     api_key = os.environ.get("GROQ_API_KEY")
@@ -33,7 +33,7 @@ def _get_groq_client():
         )
     return Groq(api_key=api_key)
 
-
+client = _get_groq_client()
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
 
 def search_listings(
@@ -69,13 +69,43 @@ def search_listings(
 
     Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
-    return []
+    listings = load_listings()
+    keywords = set(description.lower().split())
+    scored = []
+
+    for listing in listings:
+        if max_price is not None and listing["price"] > max_price:
+            continue
+        if size is not None:
+            listing_size = listing["size"].lower()
+            query_size = size.lower()
+             # Splitting to get rid of false matches i.e s and us 
+            size_tokens = re.split(r"[\s/,]+", listing_size)
+            if query_size not in size_tokens:
+               continue
+    
+        searchable = " ".join([
+            listing.get("title", ""),
+            listing.get("description", ""),
+            listing.get("category", ""),
+            listing.get("brand") or "",
+            " ".join(listing.get("style_tags", [])),
+            " ".join(listing.get("colors", [])),
+        ]).lower()
+
+        # 4. Drop any listings with a score of 0 (no relevant matches).
+        score = sum(1 for kw in keywords if kw in searchable)
+        if score > 0:
+            scored.append((score, listing))
+    
+    # 5. Sort by score, highest first, and return the listing dicts.
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [listing for _, listing in scored]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
 
-def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
+def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = []) -> str:
     """
     Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
 
@@ -100,8 +130,43 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 
     Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    # 1. Check whether wardrobe['items'] is empty.
+    items = wardrobe.get("items", [])
+    preferences = f"\nUser style preferences: {', '.join(style_preferences)}" if style_preferences else ""
+
+    # 2. If empty: call the LLM with a prompt for general styling ideas    
+    if not items:
+        prompt = f"""You are a personal stylist. A user is considering buying this thrifted item:
+            Item: {new_item.get("title")}
+            Category: {new_item.get("category")}
+            Style tags: {", ".join(new_item.get("style_tags", []))}
+            Colors: {", ".join(new_item.get("colors", []))},
+            {preferences}
+        Suggest 1-2 outfits using general wardrobe staples that would pair well with this item. Use their style preferences if they have any."""
+
+    # 3. If not empty: format the wardrobe items into a prompt and ask the LLM to suggest specific outfit combinations using the new item and named pieces from the wardrobe.
+    else:
+        wardrobe_lines = "\n".join(
+            f"- {item.get('title')} ({item.get('category')}, {item.get('colors', [])})"
+            for item in items
+        )
+        prompt = f"""You are a helpful personal stylist. A user is considering buying this thrifted item:
+            Item: {new_item.get("title")}
+            Category: {new_item.get("category")}
+            Style tags: {", ".join(new_item.get("style_tags", []))}
+            Colors: {", ".join(new_item.get("colors", []))}
+        Their current wardrobe includes:
+            {wardrobe_lines}
+        Suggest 1-2 complete outfits using the new item and specific pieces from their wardrobe."""
+   
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        max_tokens=500,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+      # 4. Return the LLM's response as a string.
+    return response.choices[0].message.content.strip()
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -131,7 +196,87 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
            and asks for a caption matching the style guidelines above.
         3. Call the LLM and return the response.
 
-    Before writing code, fill in the Tool 3 section of planning.md.
+    
     """
-    # Replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "Unable to generate a fit card — no outfit suggestion was provided. Try asking for styling advice first."
+
+    prompt = f"""You are writing a casual, authentic OOTD caption for a social media post.
+
+    The outfit: {outfit}
+
+    The thrifted item details:
+    - Name: {new_item.get("title")}
+    - Price: ${new_item.get("price")}
+    - Platform: {new_item.get("platform")}
+    - Condition: {new_item.get("condition")}
+
+    Write a 2-4 sentence caption that:
+    - Sounds like a real person, not a product listing
+    - Mentions the item name, price, and platform once each, naturally
+    - Feels fresh and specific to this exact outfit"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        max_tokens=200,
+        temperature=1.0,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content
+
+def compare_price(item: dict, listings: list[dict]) -> dict:
+    """
+    Estimate whether an item's price is fair based on comparable listings.
+    
+    Args:
+        item:     The listing dict for the item being evaluated.
+        listings: The full dataset to compare against.
+    
+    Returns:
+        A dict with verdict, price stats, and a human-readable message.
+        If fewer than 2 comparables exist, returns success: False.
+    """
+    item_price    = item.get("price", 0.0)
+    item_category = item.get("category", "").lower()
+    item_tags     = set(t.lower() for t in item.get("style_tags", []))
+
+    def is_comparable(listing):
+        if listing.get("id") == item.get("id"):
+            return False
+        if listing.get("category", "").lower() != item_category:
+            return False
+        listing_tags = set(t.lower() for t in listing.get("style_tags", []))
+        return len(listing_tags & item_tags) > 0
+
+    comparables = [l for l in listings if is_comparable(l)]
+
+    if len(comparables) < 2:
+        return {
+            "success": False,
+            "message": "Not enough comparable listings to evaluate this price."
+        }
+
+    avg_price = sum(l["price"] for l in comparables) / len(comparables)
+
+    if item_price < avg_price * 0.85:
+        verdict = "low"
+    elif item_price > avg_price * 1.15:
+        verdict = "high"
+    else:
+        verdict = "fair"
+
+    verdict_line = {
+        "low":  f"This item is priced below average — good deal compared to {len(comparables)} similar listings averaging ${avg_price:.2f}.",
+        "fair": f"This item is priced fairly compared to {len(comparables)} similar listings averaging ${avg_price:.2f}.",
+        "high": f"This item is priced above average compared to {len(comparables)} similar listings averaging ${avg_price:.2f}.",
+    }
+
+    return {
+        "success":              True,
+        "verdict":              verdict,
+        "item_price":           item_price,
+        "avg_comparable_price": round(avg_price, 2),
+        "comparable_count":     len(comparables),
+        "message":              verdict_line[verdict],
+    }

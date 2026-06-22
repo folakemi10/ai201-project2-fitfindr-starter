@@ -1,0 +1,21 @@
+{
+  "65c5ff72-7723-4c48-8cec-c945287465be": {
+    "wardrobe": {
+      "_note": "Use this as the starting template for a new user with no wardrobe entered yet.",
+      "items": []
+    },
+    "style_preferences": [
+      "y2k",
+      "vintage",
+      "graphic tee",
+      "cottagecore",
+      "90s",
+      "feminine",
+      "floral",
+      "minimal",
+      "linen",
+      "earth tones",
+      "summer"
+    ]
+  }
+}

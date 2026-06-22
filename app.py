@@ -12,6 +12,8 @@ Then open the localhost URL shown in your terminal (usually http://localhost:786
 but check your terminal — the port may differ).
 """
 
+import uuid
+
 import gradio as gr
 
 from agent import run_agent
@@ -20,13 +22,14 @@ from utils.data_loader import get_example_wardrobe, get_empty_wardrobe
 
 # ── query handler ─────────────────────────────────────────────────────────────
 
-def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
+def handle_query(user_query: str, wardrobe_choice: str, user_id: str) -> tuple[str, str, str]:
     """
     Called by Gradio when the user submits a query.
 
     Args:
         user_query:     The text the user typed into the search box.
         wardrobe_choice: Either "Example wardrobe" or "Empty wardrobe (new user)".
+        user_id:        A unique identifier for the user.
 
     Returns:
         A tuple of three strings:
@@ -36,15 +39,45 @@ def handle_query(user_query: str, wardrobe_choice: str) -> tuple[str, str, str]:
     TODO:
         1. Guard against an empty query (return early with an error message).
         2. Select the wardrobe based on wardrobe_choice.
-        3. Call run_agent() with the query and selected wardrobe.
+        3. Call run_agent() with the user_id, query, and selected wardrobe.
         4. If session["error"] is set, return the error in the first panel
            and empty strings for the other two.
         5. Otherwise, format session["selected_item"] into a readable listing_text
            string and return it along with session["outfit_suggestion"] and
            session["fit_card"].
     """
-    # TODO: implement this function
-    return "Agent not yet implemented.", "", ""
+    if not user_query or not user_query.strip():
+        return "Please enter a search query.", "", ""
+
+    wardrobe = get_example_wardrobe() if wardrobe_choice == "Example wardrobe" else get_empty_wardrobe()
+
+    session = run_agent(query=user_query, user_id=user_id, wardrobe=wardrobe)
+
+    if session["error"]:
+        return session["error"], "", ""
+    
+    item = session["selected_item"]
+    price_verdict = session.get("price_verdict")
+    verdict_line = (
+        f"Price verdict: {price_verdict['verdict'].upper()} — {price_verdict['message']}"
+        if price_verdict else ""
+    )
+    
+    listing_text = f"""
+        {item.get('title')}
+        Brand:     {item.get('brand', 'Unknown')}
+        Category:  {item.get('category')}
+        Size:      {item.get('size')}
+        Condition: {item.get('condition')}
+        Price:     ${item.get('price')}
+        Platform:  {item.get('platform')}
+        Colors:    {', '.join(item.get('colors', []))}
+        Tags:      {', '.join(item.get('style_tags', []))}
+
+        {verdict_line}
+        """.strip()
+
+    return listing_text, session["outfit_suggestion"], session["fit_card"]
 
 
 # ── interface ─────────────────────────────────────────────────────────────────
@@ -59,6 +92,7 @@ EXAMPLE_QUERIES = [
 
 def build_interface():
     with gr.Blocks(title="FitFindr") as demo:
+        user_id = gr.State(value=str(uuid.uuid4()))
         gr.Markdown("""
 # FitFindr 🛍️
 Find secondhand pieces and get outfit ideas based on your wardrobe.
@@ -106,12 +140,12 @@ Describe what you're looking for — include size and price if you want to filte
 
         submit_btn.click(
             fn=handle_query,
-            inputs=[query_input, wardrobe_choice],
+            inputs=[query_input, wardrobe_choice, user_id],
             outputs=[listing_output, outfit_output, fitcard_output],
         )
         query_input.submit(
             fn=handle_query,
-            inputs=[query_input, wardrobe_choice],
+            inputs=[query_input, wardrobe_choice, user_id],
             outputs=[listing_output, outfit_output, fitcard_output],
         )
 
