@@ -1,3 +1,4 @@
+
 # FitFindr — Starter Kit
 
 This starter kit contains everything you need to begin Project 2.
@@ -61,9 +62,10 @@ Load an example wardrobe with:
 from utils.data_loader import get_example_wardrobe
 wardrobe = get_example_wardrobe()
 ```
+## LOOM link
+https://www.loom.com/share/a67bed76797c4f03bf0d32a58aaf5eb6
 
 ## Tool Inventory
-
 Your README submission must document each tool's name, inputs, and return value. **These must exactly match your actual function signatures in `tools.py`.** Your documented interfaces will be checked against your actual function signatures in `tools.py` — if the parameter count or types contradict what's in the code, you may not receive full credit for that tool.
 
 **search_listings(description, size, max_price)**
