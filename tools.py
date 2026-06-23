@@ -130,11 +130,9 @@ def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = [])
 
     Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # 1. Check whether wardrobe['items'] is empty.
     items = wardrobe.get("items", [])
     preferences = f"\nUser style preferences: {', '.join(style_preferences)}" if style_preferences else ""
 
-    # 2. If empty: call the LLM with a prompt for general styling ideas    
     if not items:
         prompt = f"""You are a personal stylist. A user is considering buying this thrifted item:
             Item: {new_item.get("title")}
@@ -142,9 +140,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = [])
             Style tags: {", ".join(new_item.get("style_tags", []))}
             Colors: {", ".join(new_item.get("colors", []))},
             {preferences}
-        Suggest 1-2 outfits using general wardrobe staples that would pair well with this item. Use their style preferences if they have any."""
+        Suggest 1-2 outfits using general wardrobe staples that would pair well with this item. Be sure to use and explicitly reference their style preferences if they have any."""
 
-    # 3. If not empty: format the wardrobe items into a prompt and ask the LLM to suggest specific outfit combinations using the new item and named pieces from the wardrobe.
     else:
         wardrobe_lines = "\n".join(
             f"- {item.get('title')} ({item.get('category')}, {item.get('colors', [])})"
@@ -161,11 +158,9 @@ def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = [])
    
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )
 
-      # 4. Return the LLM's response as a string.
     return response.choices[0].message.content.strip()
 
 
@@ -214,7 +209,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Write a 2-4 sentence caption that:
     - Sounds like a real person, not a product listing
     - Mentions the item name, price, and platform once each, naturally
-    - Feels fresh and specific to this exact outfit"""
+    - Feels dynamic and specific to this exact outfit"""
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -230,7 +225,7 @@ def compare_price(item: dict, listings: list[dict]) -> dict:
     Estimate whether an item's price is fair based on comparable listings.
     
     Args:
-        item:     The listing dict for the item being evaluated.
+        item: The listing dict for the item being evaluated.
         listings: The full dataset to compare against.
     
     Returns:
@@ -249,7 +244,7 @@ def compare_price(item: dict, listings: list[dict]) -> dict:
         listing_tags = set(t.lower() for t in listing.get("style_tags", []))
         return len(listing_tags & item_tags) > 0
 
-    comparables = [l for l in listings if is_comparable(l)]
+    comparables = [listing for listing in listings if is_comparable(listing)]
 
     if len(comparables) < 2:
         return {
@@ -257,7 +252,7 @@ def compare_price(item: dict, listings: list[dict]) -> dict:
             "message": "Not enough comparable listings to evaluate this price."
         }
 
-    avg_price = sum(l["price"] for l in comparables) / len(comparables)
+    avg_price = sum(listing["price"] for listing in comparables) / len(comparables)
 
     if item_price < avg_price * 0.85:
         verdict = "low"

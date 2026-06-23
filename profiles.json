@@ -4,18 +4,30 @@
       "_note": "Use this as the starting template for a new user with no wardrobe entered yet.",
       "items": []
     },
+    "style_preferences": []
+  },
+  "78bd6105-2bbd-4826-b998-6015bbd1c0f8": {
     "style_preferences": [
       "y2k",
       "vintage",
       "graphic tee",
       "cottagecore",
       "90s",
+      "athletic",
+      "streetwear"
+    ]
+  },
+  "5c464646-338d-4194-a62b-450b49479fdd": {
+    "style_preferences": [
+      "90s",
+      "vintage",
       "feminine",
       "floral",
-      "minimal",
-      "linen",
-      "earth tones",
-      "summer"
+      "cottagecore",
+      "grunge",
+      "flannel",
+      "streetwear",
+      "layering"
     ]
   }
 }

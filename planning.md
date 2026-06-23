@@ -217,10 +217,10 @@ Planning Loop — checks intent + session state to decide next tool
      before trusting it" is a plan. -->
 
 **Milestone 3 — Individual tool implementations:**
-I'll give Claude my Tool 1 spec (inputs, return value, failure mode) and ask it to implement search_listings() using load_listings() from the data loader — then test it against 3 queries before trusting it" is a plan. 
+I'll give Claude my Tool 1 spec (inputs, return value, failure mode) and ask it to implement search_listings() using load_listings() from the data loader and then test it . 
 
 **Milestone 4 — Planning loop and state management:**
-I'll give Claude the Architecture diagram and session schema above plus all three tool signatures and sk it to implement run_agent() and test it against a happy path and edge case
+I'll give Claude the Architecture diagram and session schema above plus all three tool signatures and ask it to review my run_agent() to see if i'm missing any edge cases
 ---
 
 ## A Complete Interaction (Step by Step)
@@ -239,6 +239,7 @@ it should calls search_listings(description="vintage graphic tee", size=None, ma
 
 **Step 3:**
 <!-- Continue until the full interaction is complete -->
-
+ step two returned the suugested_outfit and it should call create_fit and generate caption
 **Final output to user:**
 <!-- What does the user actually see at the end? -->
+the captions

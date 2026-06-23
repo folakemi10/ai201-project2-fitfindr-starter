@@ -32,18 +32,18 @@ PROFILES_PATH = "profiles.json"
 
 def load_profile(user_id: str) -> dict:
     if not os.path.exists(PROFILES_PATH):
-        return {"wardrobe": {"items": []}, "style_preferences": []}
+        return {"style_preferences": []}
 
     try:
         with open(PROFILES_PATH, "r") as f:
             profiles = json.load(f)
     except (json.JSONDecodeError, IOError) as error:
        print(f"Profile load failed: {type(error).__name__}: {error}")
-       return {"wardrobe": {"items": []}, "style_preferences": []}
+       return {"style_preferences": []}
 
-    return profiles.get(user_id, {"wardrobe": {"items": []}, "style_preferences": []})
+    return profiles.get(user_id, {"style_preferences": []})
 
-def save_profile(user_id: str, wardrobe: dict, style_preferences: list) -> None:
+def save_profile(user_id: str,style_preferences: list) -> None:
     profiles = {}
     if os.path.exists(PROFILES_PATH):
         try:
@@ -53,7 +53,6 @@ def save_profile(user_id: str, wardrobe: dict, style_preferences: list) -> None:
             profiles = {}
 
     profiles[user_id] = {
-        "wardrobe": wardrobe,
         "style_preferences": style_preferences,
     }
 
@@ -172,13 +171,11 @@ def run_agent(query: str,  user_id: str, wardrobe: dict) -> dict:
 
     session["selected_item"] = results[0]
 
-    # Update style preferences by extracting tags from the selected item
     if "style_tags" in session["selected_item"]:
         for tag in session["selected_item"]["style_tags"]:
             if tag not in session["style_preferences"]:
                 session["style_preferences"].append(tag)
 
-    # optional price comparison
     price_result = compare_price(session["selected_item"], load_listings())
     session["price_verdict"] = price_result if price_result["success"] else None
 
@@ -197,7 +194,7 @@ def run_agent(query: str,  user_id: str, wardrobe: dict) -> dict:
         new_item=session["selected_item"],
     )
 
-    save_profile(user_id, session["wardrobe"], session["style_preferences"])
+    save_profile(user_id, session["style_preferences"])
 
     return session
 
