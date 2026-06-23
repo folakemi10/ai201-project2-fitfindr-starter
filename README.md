@@ -88,7 +88,10 @@ Returns: dict with success, verdict (low/fair/high), message, and price stats. s
 Purpose: Finds listings in the same category with at least one overlapping style tag, computes their average price, and classifies the item as low (below 15% aver), high (greater than 15% average), or fair
 
 ---
-## How the Planning Loop Works Demo
+## Interaction Walkthrough Demo
+<!-- Walk through a complete interaction step by step: natural language query → each tool call (and why) → final fit card.
+     Walk through this carefully — it's how graders follow your agent's reasoning without a live demo.
+     Use a specific example — do not leave this as a template. -->
 
 The loop checks state at two decision points after parsing the query.
 
@@ -150,14 +153,63 @@ Create a contrast by pairing the sweet butterfly tee with a pair of distressed d
 
 In both outfits, the butterfly tee takes center stage, and the other pieces complement its playful, vintage vibe. Feel free to experiment and add your own accessories to make the look truly yours!"
 
-
 The loop checks `if not ession["outfit_suggestion"]`. If the LLM returns an empty string, `session["error"]` is set to `"Could not generate an outfit suggestion for this item."` and the loop returns before `create_fit_card` is called. Technically this only fires if the Groq API fails since we fall back to general styling advice when the wardrobe is empty 
 
 if `outfit_suggestion` is confirmed non empty, (it is for this example) `create_fit_card` runs taking the outfit string and the selected_item's details to produce the final caption.
 
 "I'm totally obsessing over my new Y2K Baby Tee with the cutest butterfly print - I scored it on Depop for just $18.0 and it's honestly the perfect addition to my wardrobe. I paired it with a flowy denim skirt and white sneakers for a whimsical vibe, but I'm also low-key thinking of dressing it down with some distressed denim and combat boots for a grunge-inspired look. Either way, this tee is giving me all the nostalgic feels and I'm so here for it."
-----
 
+**User query: vintage graphic tee under $30**
+
+**Step 1 — Tool called: search_listings(description, size, max_price)**
+- Tool: search_listings(description, size, max_price)
+- Input: description="vintage graphic tee", size="M", max_price=30.0
+- Why this tool: it helps the user find items in their wardrobe that matches their query
+- Output: list[dict] of the match listing
+
+**Step 1.5 — Tool called:compare_price**
+- Tool: compare_price
+- Input: The listing and The full dataset to compare against.
+- Why this tool: The user can see if the item's price is fair relative to comparable listings in the same category with overlapping style tags.
+- Output: dictionary with keys for success, verdict, item_price, avg_comparable_price, and comparable_count.
+
+**Step 2 — Tool called: suggest_outfit**
+- Tool: suggest_outfit
+- Input: top listing dict, user wardrobe dict, style preferences from stored profile
+- Why this tool: This also the user to get oufit suggestions based on style
+- Output: suggestion str
+
+**Step 3 — Tool called: create_fit_card**
+- Tool: reate_fit_card
+- Input: outfit suggestion string, top listing dict
+- Why this tool: Converts the outfit suggestion into a shareable caption for the user to post.
+- Output: A caption string
+
+**Final output to user:**
+Y2K Baby Tee — Butterfly Print
+        Brand:     None
+        Category:  tops
+        Size:      S/M
+        Condition: excellent
+        Price:     $18.0
+        Platform:  depop
+        Colors:    white, pink, purple
+        Tags:      y2k, vintage, graphic tee, cottagecore
+Price verdict: LOW — This item is priced below average — good deal compared to 14 similar listings averaging $22.00.
+
+love the Y2K Baby Tee with the butterfly print. Based on your style preferences, here are two outfit suggestions that would pair well with this item:
+
+**Outfit 1: Cottagecore Chic**
+Pair the Y2K Baby Tee with a flowy, oversized denim skirt and a pair of white sneakers. Add a floppy sun hat and a layered necklace with a delicate charm to give the outfit a whimsical touch. This look combines your love for cottagecore, vintage, and feminine styles.
+
+**Outfit 2: Grunge Revival**
+Create a contrast by pairing the sweet butterfly tee with a pair of distressed denim jeans and a flannel shirt tied around your waist. Add a pair of black combat boots and a choker necklace to give the outfit a grunge-inspired edge. This look blends your fondness for 90s grunge, Y2K, and streetwear styles.
+
+In both outfits, the butterfly tee takes center stage, and the other pieces complement its playful, vintage vibe. Feel free to experiment and add your own accessories to make the look truly yours!"
+
+I'm totally obsessing over my new Y2K Baby Tee with the cutest butterfly print - I scored it on Depop for just $18.0 and it's honestly the perfect addition to my wardrobe. I paired it with a flowy denim skirt and white sneakers for a whimsical vibe, but I'm also low-key thinking of dressing it down with some distressed denim and combat boots for a grunge-inspired look. Either way, this tee is giving me all the nostalgic feels and I'm so here for it."
+
+----
 ## Tool Inventory
 
 **`search_listings(description, size, max_price)`**
@@ -199,52 +251,8 @@ All state for a single interaction lives in a session dict initialized by `_new_
 | `session["error"]` | On any early exit | Caller checks this first; if not None, all other output fields are None |
 
 Between sessions, only `wardrobe` and `style_preferences` are persisted and written to `profiles.json` at the end of a successful run and loaded at the start of the next.
+
 ---
-
-## Interaction Walkthrough
-
-<!-- Walk through a complete interaction step by step: natural language query → each tool call (and why) → final fit card.
-     Walk through this carefully — it's how graders follow your agent's reasoning without a live demo.
-     Use a specific example — do not leave this as a template. -->
-
-**User query:looking for a silk dress under $30, size M**
-
-**Step 1 — Tool called: search_listings(description, size, max_price)**
-- Tool: search_listings(description, size, max_price)
-- Input: description="silk dress", size="M", max_price=30.0
-- Why this tool: it helps the user find items in their wardrobe that matches their query
-- Output: list[dict] of the match listing
-
-**Step 1.5 — Tool called:compare_price**
-- Tool: compare_price
-- Input: The listing and The full dataset to compare against.
-- Why this tool: The user can see if the item's price is fair relative to comparable listings in the same category with overlapping style tags.
-- Output: dictionary with keys for success, verdict, item_price, avg_comparable_price, and comparable_count.
-
-**Step 2 — Tool called: suggest_outfit**
-- Tool: suggest_outfit
-- Input: top listing dict, user wardrobe dict, style preferences from stored profile
-- Why this tool: This also the user to get oufit suggestions based on style
-- Output: suggestion str
-
-**Step 3 — Tool called: create_fit_card**
-- Tool: reate_fit_card
-- Input: outfit suggestion string, top listing dict
-- Why this tool: Converts the outfit suggestion into a shareable caption for the user to post.
-- Output: A caption string
-
-**Final output to user:**
-Y2K Baby Tee — Butterfly Print
-        Brand:     None
-        Category:  tops
-        Size:      S/M
-        Condition: excellent
-        Price:     $18.0
-        Platform:  depop
-        Colors:    white, pink, purple
-        Tags:      y2k, vintage, graphic tee, cottagecore
-Price verdict: LOW — This item is priced below average — good deal compared to 14 similar listings averaging $22.00.
-
 **Outfit 1: Cottagecore Chic**
 Pair the butterfly tee with a flowy, earth-toned linen skirt (think beige, sienna, or light brown) and a pair of neutral sandals (e.g., brown or beige). Add a minimalist straw hat and a delicate, floral hair clip to complete the look. This outfit embodies the cottagecore and feminine vibes you adore, while the earth tones bring a sense of warmth and coziness.
 
