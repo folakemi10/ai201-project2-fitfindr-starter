@@ -233,7 +233,6 @@ I'm totally obsessing over my new Y2K Baby Tee with the cutest butterfly print -
 - **Purpose:** Finds listings in the same category with at least one overlapping style tag, computes their average price, and classifies the item as low (>15% below average), high (>15% above), or fair.
 
 ---
-
 ## State Management
 
 All state for a single interaction lives in a session dict initialized by `_new_session` at the start of `run_agent`. Nothing is stored in global variables between tool calls — each tool receives exactly what it needs as explicit arguments read from the session.
@@ -352,7 +351,7 @@ My original spec didn't fully account for what needed to be returned versus what
      before trusting it" is a plan. -->
 
 **Milestone 3 — Individual tool implementations:**
-I used Claude for all the tool generation giving it the spec (inputs, return value, failure mode) from planning and the todo and asked it to implement the tools. I ended up having to revise some of the error statements and object design like the llm response call and return because it used the wrong specs. And also the parser it originally generated was too loose so i was getting matches for completely unrelated things so i added a stopword object as a source of truth for common words to ignore
+I used Claude for all the tool generation giving it the spec (inputs, return value, failure mode) from planning and the todo. I ended up having to revise some of the error statements and object design like the llm response call and return because it used the wrong specs. I also originally though the agent would check intent to determine if to skip searching and just style but i wasn't able to implement that so m loop changed. Lastly the parser was originally too loose so i was getting matches for completely unrelated things so i added a stopword object as a source of truth for common words to ignore
 
 
 **Milestone 4 — Planning loop and state management:**

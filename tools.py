@@ -138,8 +138,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = [])
             Item: {new_item.get("title")}
             Category: {new_item.get("category")}
             Style tags: {", ".join(new_item.get("style_tags", []))}
-            Colors: {", ".join(new_item.get("colors", []))},
-            {preferences}
+            Colors: {", ".join(new_item.get("colors", []))}
+        Their style prefrences include {preferences}
         Suggest 1-2 outfits using general wardrobe staples that would pair well with this item. Be sure to use and explicitly reference their style preferences if they have any."""
 
     else:
@@ -154,6 +154,7 @@ def suggest_outfit(new_item: dict, wardrobe: dict, style_preferences: list = [])
             Colors: {", ".join(new_item.get("colors", []))}
         Their current wardrobe includes:
             {wardrobe_lines}
+        Their style prefrences include {preferences}
         Suggest 1-2 complete outfits using the new item and specific pieces from their wardrobe."""
    
     response = client.chat.completions.create(

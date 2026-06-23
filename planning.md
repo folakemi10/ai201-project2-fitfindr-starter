@@ -217,10 +217,11 @@ Planning Loop — checks intent + session state to decide next tool
      before trusting it" is a plan. -->
 
 **Milestone 3 — Individual tool implementations:**
-I'll give Claude my Tool 1 spec (inputs, return value, failure mode) and ask it to implement search_listings() using load_listings() from the data loader and then test it . 
+I used Claude for all the tool generation giving it the spec (inputs, return value, failure mode) from planning and the todo and asked it to implement the tools. I ended up having to revise some of the error statements and object design like the llm response call and return because it used the wrong specs. And also the parser it originally generated was too loose so i was getting matches for completely unrelated things so i added a stopword object as a source of truth for common words to ignore
+
 
 **Milestone 4 — Planning loop and state management:**
-I'll give Claude the Architecture diagram and session schema above plus all three tool signatures and ask it to review my run_agent() to see if i'm missing any edge cases
+I also use gave Claude the Architecture diagram and session schema to help me figure out how to implement style_prefrences and how to persist the data. It was not writing to the file correctly and then trying to read corrupted data so i added a try catch statement to handle that edge case
 ---
 
 ## A Complete Interaction (Step by Step)

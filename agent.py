@@ -140,14 +140,11 @@ def run_agent(query: str,  user_id: str, wardrobe: dict) -> dict:
 
     profile = load_profile(user_id)
 
-    if wardrobe is not None:
-        resolved_wardrobe = wardrobe 
-    else:
-        resolved_wardrobe = profile["wardrobe"]
+    wardrobe = wardrobe 
 
     style_preferences  = profile["style_preferences"]
 
-    session = _new_session(query, resolved_wardrobe, style_preferences)
+    session = _new_session(query, wardrobe, style_preferences)
 
     session["parsed"] = _parse_query(query)
     parsed = session["parsed"]
@@ -177,6 +174,7 @@ def run_agent(query: str,  user_id: str, wardrobe: dict) -> dict:
                 session["style_preferences"].append(tag)
 
     price_result = compare_price(session["selected_item"], load_listings())
+    
     session["price_verdict"] = price_result if price_result["success"] else None
 
     session["outfit_suggestion"] = suggest_outfit(
